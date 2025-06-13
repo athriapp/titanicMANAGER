@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic Shop - Management</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0056b3;
+            --primary-dark: #003d82;
+            --primary-light: #e9f5ff;
+            --accent: #2196F3;
+            --pending: #ff9800;
+            --processing: #2196F3;
+            --delivered: #4CAF50;
+            --white: #ffffff;
+            --light-gray: #f5f5f5;
+            --border: #ddd;
+            --text: #333;
+            --text-secondary: #666;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light-gray);
+            color: var(--text);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--white);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--primary-dark);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.8rem;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #4CAF50;
+            margin-right: 8px;
+        }
+        
+        .tabs {
+            display: flex;
+            background-color: var(--primary-light);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            background-color: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tab:hover {
+            background-color: rgba(0, 86, 179, 0.05);
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary-dark);
+        }
+        
+        .orders-count {
+            background-color: var(--primary);
+            color: white;
+            font-size: 0.75rem;
+            height: 20px;
+            width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tab-content h2 {
+            color: var(--primary);
+            font-weight: 500;
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .order-card {
+            background-color: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .order-id {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .order-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .order-meta {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .order-meta p {
+            margin: 5px 0;
+        }
+        
+        .order-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .item-link {
+            background-color: var(--primary);
+            color: var(--white);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .item-link:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .item-link i {
+            margin-right: 6px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+        
+        .badge-pending {
+            background-color: var(--pending);
+        }
+        
+        .badge-processing {
+            background-color: var(--processing);
+        }
+        
+        .badge-delivered {
+            background-color: var(--delivered);
+        }
+        
+        .user-info {
+            background-color: var(--primary-light);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .user-info h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-info h4 i {
+            margin-right: 8px;
+        }
+        
+        .user-info p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+        
+        .user-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .status-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            color: var(--white);
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        
+        .btn i {
+            margin-right: 6px;
+        }
+        
+        .btn-accept {
+            background-color: var(--processing);
+        }
+        
+        .btn-accept:hover {
+            background-color: #1976D2;
+        }
+        
+        .btn-deliver {
+            background-color: var(--delivered);
+        }
+        
+        .btn-deliver:hover {
+            background-color: #388E3C;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--white);
+            color: var(--text);
+            border-left: 4px solid var(--primary);
+            padding: 12px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            z-index: 1000;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            transform: translateX(120%);
+            opacity: 0;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            border-left-color: var(--delivered);
+        }
+        
+        .toast.error {
+            border-left-color: #f44336;
+        }
+        
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: var(--primary-light);
+        }
+        
+        .loader {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .loader:after {
+            content: " ";
+            display: block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+            border-color: var(--primary) transparent var(--primary) transparent;
+            animation: loader 1.2s linear infinite;
+        }
+        
+        @keyframes loader {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .order-meta {
+                grid-template-columns: 1fr;
+            }
+            
+            .user-info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                padding: 0;
+            }
+            
+            .tab {
+                padding: 15px 15px;
+                font-size: 0.9rem;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div style="margin-top: 30px; margin-bottom: 30px; align-items: center; padding-left: 200px;">
+        <H1 style="margin-left: 18%;">PRICES AND DOLLAR CONVERTION</H1>
+         <input type ="text" id="titanicPrice" placeholder="enter titanic price here..."  >
+            <input type ="text" id="IqdPrice" placeholder="convertion"style="margin-right: 70px;">
+            <input type ="text" id="officePrice" placeholder="enter office price here..."  >
+            <input type ="text" id="IqdPrice2" placeholder="convertion" >
+            <button onclick="DisplayPrice()">DISPLAY PRICE</button>
+            <p id="higher-cost"style="margin-left:20%">ENTER THE PRICES TO SHOW CONVERTION</p>
+    </div>
+    <div class="container">
+         <input type ="text" id="titanicPrice" value="0.00" style="display:none;">
+            <input type ="text" id="IqdPrice" value="0.00" style="display:none;">
+            <input type ="text" id="officePrice" value="0.00" style="display:none;">
+            <input type ="text" id="IqdPrice2" value="0.00" style="display:none;">
+        <div class="header">
+           
+            <h1><i class="fas fa-ship"></i> Titanic Shop Management</h1>
+            
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span id="statusMessage">Connected to database</span>
+            </div>
+        </div>
+        <div id="managementContainer" class="management-container">
+            <div class="tabs">
+                <button class="tab active" data-tab="pending"><i class="fas fa-clock"></i> Pending <span id="pendingCount" class="orders-count">0</span></button>
+                <button class="tab" data-tab="processing"><i class="fas fa-spinner"></i> Processing <span id="processingCount" class="orders-count">0</span></button>
+                <button class="tab" data-tab="delivered"><i class="fas fa-check-circle"></i> Delivered <span id="deliveredCount" class="orders-count">0</span></button>
+            </div>
+
+            <div id="pendingOrders" class="tab-content active">
+                <h2>Pending Orders</h2>
+                <div id="pendingOrdersList">
+                    <div class="loader"></div>
+                </div>
+            </div>
+
+            <div id="processingOrders" class="tab-content">
+                <h2>Processing Orders</h2>
+                <div id="processingOrdersList">
+                    <div class="loader"></div>
+                </div>
+            </div>
+
+            <div id="deliveredOrders" class="tab-content">
+                <h2>Delivered Orders</h2>
+                <div id="deliveredOrdersList">
+                    <div class="loader"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+  
+        const firebaseConfig = {
+            apiKey: "AIzaSyDY3Y9uwQMFEeZQfLE09PrpbYmld02giZQ",
+            authDomain: "titanic-shop.firebaseapp.com",
+            databaseURL: "https://titanic-shop-default-rtdb.firebaseio.com",
+            projectId: "titanic-shop",
+            storageBucket: "titanic-shop.firebasestorage.app",
+            messagingSenderId: "552361007073",
+            appId: "1:552361007073:web:bf7c506205e1aa6aada4a0"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        const managementContainer = document.getElementById('managementContainer');
+        const pendingOrdersList = document.getElementById('pendingOrdersList');
+        const processingOrdersList = document.getElementById('processingOrdersList');
+        const deliveredOrdersList = document.getElementById('deliveredOrdersList');
+        const pendingCount = document.getElementById('pendingCount');
+        const processingCount = document.getElementById('processingCount');
+        const deliveredCount = document.getElementById('deliveredCount');
+        const statusMessage = document.getElementById('statusMessage');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const toast = document.getElementById('toast');
+        document.addEventListener('DOMContentLoaded', () => {
+            statusMessage.textContent = "Connected to database";
+            
+            loadOrders();
+        });
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === `${tabId}Orders`) {
+                        content.classList.add('active');
+                    }
+                });
+            });
+        });
+
+       
+        function loadOrders() {
+            firebase.database().ref('orders').on('value', (snapshot) => {
+           
+                pendingOrdersList.innerHTML = '';
+                processingOrdersList.innerHTML = '';
+                deliveredOrdersList.innerHTML = '';
+                
+                let pendingOrdersCount = 0;
+                let processingOrdersCount = 0;
+                let deliveredOrdersCount = 0;
+                
+                if (snapshot.exists()) {
+                    const orders = snapshot.val();
+                    
+                    const sortedOrders = Object.entries(orders)
+                        .map(([id, data]) => ({ id, ...data }))
+                        .sort((a, b) => b.createdAt - a.createdAt);
+                    
+                    const userCache = {};
+                    
+                    sortedOrders.forEach((order) => {
+                        const orderCard = createOrderCard(order, userCache);
+                        
+                        switch (order.status) {
+                            case 'pending':
+                                pendingOrdersList.appendChild(orderCard);
+                                pendingOrdersCount++;
+                                break;
+                            case 'processing':
+                                processingOrdersList.appendChild(orderCard);
+                                processingOrdersCount++;
+                                break;
+                            case 'delivered':
+                                deliveredOrdersList.appendChild(orderCard);
+                                deliveredOrdersCount++;
+                                break;
+                        }
+                    });
+                    
+                   
+                    pendingCount.textContent = pendingOrdersCount;
+                    processingCount.textContent = processingOrdersCount;
+                    deliveredCount.textContent = deliveredOrdersCount;
+                    
+                    if (pendingOrdersCount === 0) {
+                        pendingOrdersList.innerHTML = createEmptyState('No pending orders');
+                    }
+                    if (processingOrdersCount === 0) {
+                        processingOrdersList.innerHTML = createEmptyState('No processing orders');
+                    }
+                    if (deliveredOrdersCount === 0) {
+                        deliveredOrdersList.innerHTML = createEmptyState('No delivered orders');
+                    }
+                } else {
+                    pendingOrdersList.innerHTML = createEmptyState('No pending orders');
+                    processingOrdersList.innerHTML = createEmptyState('No processing orders');
+                    deliveredOrdersList.innerHTML = createEmptyState('No delivered orders');
+                   
+                    pendingCount.textContent = 0;
+                    processingCount.textContent = 0;
+                    deliveredCount.textContent = 0;
+                }
+            });
+        }
+
+        function createEmptyState(message) {
+            return `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Link copied to clipboard!', 'success');
+            }, (err) => {
+                console.error('Could not copy text: ', err);
+                showToast('Failed to copy link', 'error');
+            });
+        }
+
+        function createOrderCard(order, userCache) {
+            const orderCard = document.createElement('div');
+            orderCard.className = 'order-card';
+            
+            const orderDate = new Date(order.createdAt);
+            const formattedDate = orderDate.toLocaleString();
+            
+            let statusBadgeClass = '';
+            switch (order.status) {
+                case 'pending':
+                    statusBadgeClass = 'badge-pending';
+                    break;
+                case 'processing':
+                    statusBadgeClass = 'badge-processing';
+                    break;
+                case 'delivered':
+                    statusBadgeClass = 'badge-delivered';
+                    break;
+            }
+            
+            orderCard.innerHTML = `
+                <div class="order-header">
+                    <div>
+                        <div class="order-id">Order #${order.id.substring(0, 8)}</div>
+                        <div class="order-date"><i class="far fa-calendar-alt"></i> ${formattedDate}</div>
+                    </div>
+                    <div>
+                        <span class="status-badge ${statusBadgeClass}">${order.status}</span>
+                    </div>
+                </div>
+                
+                <div class="order-meta">
+                    <p><strong>Size:</strong> ${order.size}</p>
+                    <p><strong>Color:</strong> ${order.color}</p>
+                    <p><strong>Quantity:</strong> ${order.quantity}</p>
+                </div>
+                
+                <div class="order-item">
+    <div style="margin-bottom: 10px;">
+        <strong>Item Link:</strong>
+        <a href="${order.itemLink}" target="_blank">${order.itemLink}</a>
+    </div>
+    <button class="item-link" onclick="copyToClipboard('${order.itemLink}')">
+        <i class="fas fa-copy"></i> Copy Link to Clipboard
+    </button>
+</div>
+                
+                <div class="user-info">
+                    <h4><i class="fas fa-user"></i> Customer Information</h4>
+                    <div class="user-info-grid">
+                        <p>Loading user data...</p>
+                    </div>
+                </div>
+            `;
+            
+            const statusActions = document.createElement('div');
+            statusActions.className = 'status-actions';
+            
+            if (order.status === 'pending') {
+                const acceptBtn = document.createElement('button');
+                acceptBtn.className = 'btn btn-accept';
+                acceptBtn.innerHTML = '<i class="fas fa-check"></i> Accept Order';
+                acceptBtn.addEventListener('click', () => {
+                    changeOrderStatus(order.id, 'processing');
+                });
+                statusActions.appendChild(acceptBtn);
+            } else if (order.status === 'processing') {
+                const deliverBtn = document.createElement('button');
+                deliverBtn.className = 'btn btn-deliver';
+                deliverBtn.innerHTML = '<i class="fas fa-truck"></i> Mark as Delivered';
+                deliverBtn.addEventListener('click', () => {
+                    changeOrderStatus(order.id, 'delivered');
+                });
+                statusActions.appendChild(deliverBtn);
+            }
+            
+            orderCard.appendChild(statusActions);
+        
+            const userInfoSection = orderCard.querySelector('.user-info-grid');
+            
+            if (userCache[order.userId]) {
+                updateUserInfo(userInfoSection, userCache[order.userId]);
+            } else {
+                firebase.database().ref('users/' + order.userId).once('value')
+                    .then((snapshot) => {
+                        const userData = snapshot.val();
+                        if (userData) {
+                          
+                            userCache[order.userId] = userData;
+               
+                            updateUserInfo(userInfoSection, userData);
+                        } else {
+                            userInfoSection.innerHTML = '<p>User information not available</p>';
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error loading user data:', error);
+                        userInfoSection.innerHTML = '<p>Error loading user data</p>';
+                    });
+            }
+            
+            return orderCard;
+        }
+        
+       function updateUserInfo(element, userData) {
+  
+    element.innerHTML = `
+        <p><strong>Name:</strong> ${userData.fullName}</p>
+        <p><strong>Email:</strong> ${userData.email}</p>
+        <p><strong>Phone:</strong> ${userData.phone || 'Not provided'}</p>
+        <p><strong>City:</strong> ${userData.city}</p>
+        <p><strong>Address:</strong> ${userData.address}</p>
+        ${userData.additionalAddress ? `<p><strong>Additional:</strong> ${userData.additionalAddress}</p>` : ''}
+    `;
+}
+     
+        function changeOrderStatus(orderId, newStatus) {
+            firebase.database().ref('orders/' + orderId).update({
+                status: newStatus
+            })
+            .then(() => {
+                console.log(`Order ${orderId} status updated to ${newStatus}`);
+                showToast(`Order status updated to ${newStatus}`, 'success');
+            })
+            .catch((error) => {
+                console.error(`Error updating order status: ${error.message}`);
+                showToast(`Error updating order status: ${error.message}`, 'error');
+            });
+        }
+        
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = 'toast show ' + type;
+           
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
+     function DisplayPrice() {
+    let titanicPrice = parseFloat(document.getElementById('titanicPrice').value) || 0;
+    let iqdPrice = document.getElementById('IqdPrice');
+    let officePrice = parseFloat(document.getElementById('officePrice').value) || 0;
+    let iqdPrice2 = document.getElementById('IqdPrice2');
+    let higherCost = document.getElementById('higher-cost');
+
+    let titanicIqd = titanicPrice * 1350;
+    let officeIqd = officePrice * 1320;
+
+    iqdPrice.value = titanicIqd.toFixed(2);
+    iqdPrice2.value = officeIqd.toFixed(2);
+
+    if (titanicIqd > officeIqd) {
+        higherCost.innerText = `Apply Titanic price: ${titanicPrice}$, Convert: ${titanicIqd.toFixed(2)} IQD`;
+    } else if (officeIqd > titanicIqd) {
+        let officepricetoTitanic = iqdPrice2.value * (1350 / 1320);
+        higherCost.innerText = `Apply Office price: ${officePrice}, Convert: ${officepricetoTitanic} IQD`;
+    } else {
+        higherCost.textContent = "Both prices are equal";
+    }
+}
+
+
+    </script>
+</body>
+</html>
