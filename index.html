@@ -260,6 +260,37 @@
             gap: 10px;
         }
         
+        .message-section {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .message-section h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #856404;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .message-section h4 i {
+            margin-right: 8px;
+        }
+        
+        .message-section p {
+            margin: 0;
+            color: #856404;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
         .status-actions {
             display: flex;
             justify-content: flex-end;
@@ -454,7 +485,8 @@
             appId: "1:552361007073:web:bf7c506205e1aa6aada4a0"
         };
         firebase.initializeApp(firebaseConfig);
-
+        const database = firebase.database();
+        const messagesRef = database.ref("messages");
         const managementContainer = document.getElementById('managementContainer');
         const pendingOrdersList = document.getElementById('pendingOrdersList');
         const processingOrdersList = document.getElementById('processingOrdersList');
@@ -592,6 +624,14 @@
                     break;
             }
             
+            // Create the message section HTML if message exists
+            const messageHTML = order.message ? `
+                <div class="message-section">
+                    <h4><i class="fas fa-comment-alt"></i> Customer Message</h4>
+                    <p>${order.message}</p>
+                </div>
+            ` : '';
+            
             orderCard.innerHTML = `
                 <div class="order-header">
                     <div>
@@ -610,14 +650,16 @@
                 </div>
                 
                 <div class="order-item">
-    <div style="margin-bottom: 10px;">
-        <strong>Item Link:</strong>
-        <a href="${order.itemLink}" target="_blank">${order.itemLink}</a>
-    </div>
-    <button class="item-link" onclick="copyToClipboard('${order.itemLink}')">
-        <i class="fas fa-copy"></i> Copy Link to Clipboard
-    </button>
-</div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Item Link:</strong>
+                        <a href="${order.itemLink}" target="_blank">${order.itemLink}</a>
+                    </div>
+                    <button class="item-link" onclick="copyToClipboard('${order.itemLink}')">
+                        <i class="fas fa-copy"></i> Copy Link to Clipboard
+                    </button>
+                </div>
+                
+                ${messageHTML}
                 
                 <div class="user-info">
                     <h4><i class="fas fa-user"></i> Customer Information</h4>
